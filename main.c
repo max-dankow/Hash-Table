@@ -25,6 +25,7 @@ struct Node* list_add(struct Node* inz, const char *key, const int value);
 void add_element(struct Table *table, const char *key, const int value);
 int *find_element(struct Table *table, const char *key);
 void remove_element(struct Table *table, const char *key);
+void dispose_table(struct Table **table);
 
 
 int main()
@@ -41,7 +42,7 @@ int main()
 
     write_table(my_table);
     remove_element(my_table, "A");
-    printf("Elemetn has been removed.");
+    printf("Element has been removed.");
     write_table(my_table);
 
     add_element(my_table, "Tuple", 10002);
@@ -56,6 +57,10 @@ int main()
     int *rez = find_element(my_table, "F");
 
     printf("%d\n", (rez == NULL)? -1 : (*rez));
+
+    dispose_table(&my_table);
+
+    write_table(my_table);
 
     return 0;
 }
@@ -76,13 +81,13 @@ size_t Hash(const char *key, const size_t size, const long long prime_local)
 struct Table *create_table(const size_t size, const long long new_prime)
 {
     struct Table* new_table = malloc(size * sizeof(struct Table*));
-    (*new_table).size = size;
-    (*new_table).prime = new_prime;
-    (*new_table).buckets = malloc(size * sizeof(struct Node));
+    new_table->size = size;
+    new_table->prime = new_prime;
+    new_table->buckets = malloc(size * sizeof(struct Node));
 
     for (size_t i = 0; i < size; ++i)
     {
-        (*new_table).buckets[i] = NULL;
+        new_table->buckets[i] = NULL;
     }
 
     return new_table;
@@ -90,13 +95,16 @@ struct Table *create_table(const size_t size, const long long new_prime)
 
 void write_table(const struct Table *table)
 {
-    for (size_t i = 0; i < (*table).size; ++i)
+    if (table == NULL)
+        return;
+
+    for (size_t i = 0; i < table->size; ++i)
     {
-        struct Node *current_node = (*table).buckets[i];
+        struct Node *current_node = table->buckets[i];
         while (current_node != NULL)
         {
-            printf("%s ", (*current_node).key);
-            current_node = (*current_node).next;
+            printf("%s ", current_node->key);
+            current_node = current_node->next;
         }
         printf(" NULL\n");
     }
@@ -105,16 +113,22 @@ void write_table(const struct Table *table)
 
 struct Node* list_add(struct Node* inz, const char *key, const int value)
 {
+    if (inz == NULL)
+        return NULL;
+
     struct Node *new_node = malloc(sizeof(struct Node));
-    (*new_node).next = inz;
-    (*new_node).key = key;
-    (*new_node).value = value;
+    new_node->next = inz;
+    new_node->key = key;
+    new_node->value = value;
 
     return new_node;
 }
 
 void add_element(struct Table *table, const char *key, const int value)
 {
+    if (table == NULL)
+        return;
+
     size_t hash_key = Hash(key, table->size, table->prime);
     struct Node *inz = table->buckets[hash_key];
     table->buckets[hash_key] = list_add(inz, key, value);
@@ -122,18 +136,24 @@ void add_element(struct Table *table, const char *key, const int value)
 
 int *find_element(struct Table *table, const char *key)
 {
-    size_t hash_key = Hash(key,(*table).size, (*table).prime);
-    struct Node *inz = (*table).buckets[hash_key];
+    if (table == NULL)
+        return NULL;
+
+    size_t hash_key = Hash(key,table->size, table->prime);
+    struct Node *inz = table->buckets[hash_key];
 
     while ((inz != NULL) && (strcmp(inz->key, key) != 0))
-        inz = (*inz).next;
+        inz = inz->next;
 
     return (inz == NULL)? NULL : &(inz->value);
 }
 
 void remove_element(struct Table *table, const char *key)
 {
-    size_t hash_key = Hash(key,(*table).size, (*table).prime);
+    if (table == NULL)
+        return;
+
+    size_t hash_key = Hash(key,table->size, table->prime);
     struct Node *inz = table->buckets[hash_key];
 
     if (inz == NULL)
@@ -149,7 +169,7 @@ void remove_element(struct Table *table, const char *key)
 
 
     while ((inz->next != NULL) && (strcmp(inz->next->key, key) != 0))
-        inz = (*inz).next;
+        inz = inz->next;
 
     if ((inz->next != NULL) && (strcmp(inz->next->key, key) == 0))
     {
@@ -158,5 +178,22 @@ void remove_element(struct Table *table, const char *key)
         inz->next = temp;
     }
 
+}
+
+void dispose_table(struct Table **table)
+{
+    for (size_t i = 0; i < (*table)->size; ++i)
+    {
+        struct Node *current_ptr = (*table)->buckets[i];
+        while (current_ptr != NULL)
+        {
+            struct Node *deleted_ptr = current_ptr;
+            current_ptr = current_ptr->next;
+            free(deleted_ptr);
+        }
+    }
+
+    free(*table);
+    *table = NULL;
 }
 
