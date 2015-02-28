@@ -4,7 +4,7 @@ CONFIG -= app_bundle
 CONFIG -= qt
 QMAKE_CFLAGS += -std=c99
 
-SOURCES += main.c
+SOURCES += main.c \
 
 include(deployment.pri)
 qtcAddDeployment()
