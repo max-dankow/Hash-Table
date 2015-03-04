@@ -26,10 +26,17 @@ int main()
         int input_value;
         read_code = fscanf(f, "%s", code);
 
-        if (read_code != 1)
-            return 1;
         if (read_code == EOF)
             break;
+
+        if (read_code != 1)
+        {
+            dispose_table(&my_table);
+            free(input_str);
+            fclose(f);
+
+            return 1;
+        }
 
         switch (*code)
         {
