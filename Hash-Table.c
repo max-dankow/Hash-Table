@@ -1,20 +1,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "Hash-Table.h"
 
-struct Node
+typedef struct Node
 {
     struct Node *next;
     char *key;
     int value;
-};
+} Node;
 
-struct Table
+typedef struct Table
 {
     size_t size;
+    size_t element_number;
     long long prime;
-    struct Node **buckets;
-};
+    Node **buckets;
+} Table;
 
 size_t Hash(const char *key, const size_t size, const long long prime_local)
 {
@@ -29,12 +31,13 @@ size_t Hash(const char *key, const size_t size, const long long prime_local)
     return (size_t) (current_hash % size);
 }
 
-struct Table *create_table(const size_t size, const long long new_prime)
+Table *create_table(const size_t size, const long long new_prime)
 {
-    struct Table* new_table = malloc(size * sizeof(struct Table*));
+    Table* new_table = malloc(sizeof(Table));
     new_table->size = size;
     new_table->prime = new_prime;
-    new_table->buckets = malloc(size * sizeof(struct Node));
+    new_table->element_number = 0;
+    new_table->buckets = malloc(size * sizeof(Node));
 
     for (size_t i = 0; i < size; ++i)
     {
@@ -44,14 +47,14 @@ struct Table *create_table(const size_t size, const long long new_prime)
     return new_table;
 }
 
-void write_table(const struct Table *table)
+void write_table(const Table *table)
 {
     if (table == NULL)
         return;
 
     for (size_t i = 0; i < table->size; ++i)
     {
-        struct Node *current_node = table->buckets[i];
+        Node *current_node = table->buckets[i];
         while (current_node != NULL)
         {
             printf("%s ", current_node->key);
@@ -59,12 +62,11 @@ void write_table(const struct Table *table)
         }
         printf("NULL\n");
     }
-    //printf("\n");
 }
 
-struct Node* list_add(struct Node* inz, const char *key, const int value)
+Node* list_add(Node* inz, const char *key, const int value)
 {
-    struct Node *new_node = malloc(sizeof(struct Node));
+    Node *new_node = malloc(sizeof(Node));
     new_node->next = inz;
     char *data = malloc(strlen(key));
     data = strcpy(data, key);
@@ -74,23 +76,57 @@ struct Node* list_add(struct Node* inz, const char *key, const int value)
     return new_node;
 }
 
-void add_element(struct Table *table, const char *key, const int value)
+void copy_table(Table *src, Table *dst)
 {
-    if (table == NULL)
+    if (src == NULL || dst == NULL)
         return;
 
-    size_t hash_key = Hash(key, table->size, table->prime);
-    struct Node *inz = table->buckets[hash_key];
-    table->buckets[hash_key] = list_add(inz, key, value);
+    for (size_t i = 0; i < src->size; ++i)
+    {
+        Node *current_node = src->buckets[i];
+        while (current_node != NULL)
+        {
+            add_element(dst, current_node->key, current_node->value);
+            current_node = current_node->next;
+        }
+    }
 }
 
-int *find_element(struct Table *table, const char *key)
+Table *rehash(Table *table)
+{
+    if (table->element_number >= (4/3)*table->size)
+    {
+        Table *new_table = create_table(table->size * 2, table->prime);
+        copy_table(table, new_table);
+        dispose_table(&table);
+        printf("\033[31mTable was rehashed. New size is %d\n\033[0m", new_table->size);
+        return new_table;
+    }
+    else
+    {
+        return table;
+    }
+}
+
+Table *add_element(Table *table, const char *key, const int value)
+{
+    if (table == NULL)
+        return table;
+
+    size_t hash_key = Hash(key, table->size, table->prime);
+    Node *inz = table->buckets[hash_key];
+    table->element_number++;
+    table->buckets[hash_key] = list_add(inz, key, value);
+    return rehash(table);
+}
+
+int *find_element(Table *table, const char *key)
 {
     if (table == NULL)
         return NULL;
 
     size_t hash_key = Hash(key,table->size, table->prime);
-    struct Node *inz = table->buckets[hash_key];
+    Node *inz = table->buckets[hash_key];
 
     while ((inz != NULL) && (strcmp(inz->key, key) != 0))
         inz = inz->next;
@@ -98,22 +134,23 @@ int *find_element(struct Table *table, const char *key)
     return (inz == NULL)? NULL : &(inz->value);
 }
 
-void remove_element(struct Table *table, const char *key)
+void remove_element(Table *table, const char *key)
 {
     if (table == NULL)
         return;
 
     size_t hash_key = Hash(key,table->size, table->prime);
-    struct Node *inz = table->buckets[hash_key];
+    Node *inz = table->buckets[hash_key];
 
     if (inz == NULL)
         return;
 
     if (strcmp(inz->key, key) == 0)
     {
-        struct Node *temp = inz->next;
+        Node *temp = inz->next;
         free(inz->key);
         free(inz);
+        table->element_number--;
         table->buckets[hash_key] = temp;
         return;
     }
@@ -123,22 +160,23 @@ void remove_element(struct Table *table, const char *key)
 
     if ((inz->next != NULL) && (strcmp(inz->next->key, key) == 0))
     {
-        struct Node *temp = inz->next->next;
+        Node *temp = inz->next->next;
         free(inz->next->key);
         free(inz->next);
+        table->element_number--;
         inz->next = temp;
     }
 
 }
 
-void dispose_table(struct Table **table)
+void dispose_table(Table **table)
 {
     for (size_t i = 0; i < (*table)->size; ++i)
     {
-        struct Node *current_ptr = (*table)->buckets[i];
+        Node *current_ptr = (*table)->buckets[i];
         while (current_ptr != NULL)
         {
-            struct Node *deleted_ptr = current_ptr;
+            Node *deleted_ptr = current_ptr;
             current_ptr = current_ptr->next;
             free(deleted_ptr->key);
             free(deleted_ptr);

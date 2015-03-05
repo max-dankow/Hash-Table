@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "Hash-Table.h"
 
 const long long PRIME = 53;
 const int INPUT_STRING_SIZE = 200;
@@ -45,7 +46,7 @@ int main()
 
                 if (read_code != 2)
                     return 1;
-                add_element(my_table, input_str, input_value);
+                my_table = add_element(my_table, input_str, input_value);
                 printf("\033[32mADD %s %d\n\n\033[0m", input_str, input_value);
                 break;
             case 'f':
