@@ -13,6 +13,7 @@ int main()
 
     if (f == NULL)
         return 1;
+
     int table_size;
     fscanf(f, "%d", &table_size);
 
@@ -32,7 +33,7 @@ int main()
 
         if (read_code != 1)
         {
-            dispose_table(&my_table);
+            dispose_table(&my_table, 1);
             free(input_str);
             fclose(f);
 
@@ -46,7 +47,12 @@ int main()
 
                 if (read_code != 2)
                     return 1;
-                my_table = add_element(my_table, input_str, input_value);
+                char *data = malloc(strlen(input_str));
+                data = strcpy(data, input_str);
+                int *value = malloc(sizeof(int));
+                *value = input_value;
+                data = strcpy(data, input_str);
+                my_table = add_element(my_table, data, value);
                 printf("\033[32mADD %s %d\n\n\033[0m", input_str, input_value);
                 break;
             case 'f':
@@ -76,7 +82,7 @@ int main()
          printf("----------------------------\n\n");
     }
 
-    dispose_table(&my_table);
+    dispose_table(&my_table, 1);
     free(input_str);
     fclose(f);
     return 0;

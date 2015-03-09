@@ -7,7 +7,7 @@ typedef struct Node
 {
     struct Node *next;
     char *key;
-    int value;
+    void *value_ptr;
 } Node;
 
 typedef struct Table
@@ -64,14 +64,14 @@ void write_table(const Table *table)
     }
 }
 
-Node* list_add(Node* inz, const char *key, const int value)
+Node* list_add(Node* inz, const char *key, const void *new_value_ptr)
 {
     Node *new_node = malloc(sizeof(Node));
     new_node->next = inz;
-    char *data = malloc(strlen(key));
-    data = strcpy(data, key);
-    new_node->key = data;
-    new_node->value = value;
+    //char *data = malloc(strlen(key));
+    //data = strcpy(data, key);
+    new_node->key = key;
+    new_node->value_ptr = new_value_ptr;
 
     return new_node;
 }
@@ -86,7 +86,7 @@ void copy_table(Table *src, Table *dst)
         Node *current_node = src->buckets[i];
         while (current_node != NULL)
         {
-            add_element(dst, current_node->key, current_node->value);
+            add_element(dst, current_node->key, current_node->value_ptr);
             current_node = current_node->next;
         }
     }
@@ -98,7 +98,7 @@ Table *rehash(Table *table)
     {
         Table *new_table = create_table(table->size * 2, table->prime);
         copy_table(table, new_table);
-        dispose_table(&table);
+        dispose_table(&table, 0);//0 - оставить все данные в памяти
         printf("\033[31mTable was rehashed. New size is %d\n\033[0m", new_table->size);
         return new_table;
     }
@@ -108,7 +108,7 @@ Table *rehash(Table *table)
     }
 }
 
-Table *add_element(Table *table, const char *key, const int value)
+Table *add_element(Table *table, const char *key, const void *new_value_ptr)
 {
     if (table == NULL)
         return table;
@@ -116,11 +116,11 @@ Table *add_element(Table *table, const char *key, const int value)
     size_t hash_key = Hash(key, table->size, table->prime);
     Node *inz = table->buckets[hash_key];
     table->element_number++;
-    table->buckets[hash_key] = list_add(inz, key, value);
+    table->buckets[hash_key] = list_add(inz, key, new_value_ptr);
     return rehash(table);
 }
 
-int *find_element(Table *table, const char *key)
+void *find_element(Table *table, const char *key)
 {
     if (table == NULL)
         return NULL;
@@ -131,7 +131,7 @@ int *find_element(Table *table, const char *key)
     while ((inz != NULL) && (strcmp(inz->key, key) != 0))
         inz = inz->next;
 
-    return (inz == NULL)? NULL : &(inz->value);
+    return (inz == NULL)? NULL : inz->value_ptr;
 }
 
 void remove_element(Table *table, const char *key)
@@ -149,6 +149,7 @@ void remove_element(Table *table, const char *key)
     {
         Node *temp = inz->next;
         free(inz->key);
+        free(inz->value_ptr);
         free(inz);
         table->element_number--;
         table->buckets[hash_key] = temp;
@@ -162,6 +163,7 @@ void remove_element(Table *table, const char *key)
     {
         Node *temp = inz->next->next;
         free(inz->next->key);
+        free(inz->next->value_ptr);
         free(inz->next);
         table->element_number--;
         inz->next = temp;
@@ -169,7 +171,7 @@ void remove_element(Table *table, const char *key)
 
 }
 
-void dispose_table(Table **table)
+void dispose_table(Table **table, int dispose_all_data)
 {
     for (size_t i = 0; i < (*table)->size; ++i)
     {
@@ -178,7 +180,12 @@ void dispose_table(Table **table)
         {
             Node *deleted_ptr = current_ptr;
             current_ptr = current_ptr->next;
-            free(deleted_ptr->key);
+
+            if (dispose_all_data == 1)
+            {
+                free(deleted_ptr->key);
+                free(deleted_ptr->value_ptr);
+            }
             free(deleted_ptr);
         }
     }
