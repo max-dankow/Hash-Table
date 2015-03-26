@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include "Hash-Table.h"
 
 typedef struct Node
@@ -24,7 +25,8 @@ size_t Hash(const char *key, const size_t size, const long long prime_local)
 
     for (; *key != '\0'; ++key)
     {
-        current_hash = (current_hash + ((long long) *key) * pow) % size;
+        current_hash = (current_hash + pow * ((unsigned char) (*key))) % size;
+        assert(current_hash >= 0);
         pow = (pow * prime_local) % size;
     }
 
@@ -115,13 +117,16 @@ Table *add_element(Table *table, const char *key, const void *new_value_ptr)
     Node *inz = table->buckets[hash_key];
     table->element_number++;
     table->buckets[hash_key] = list_add(inz, key, new_value_ptr);
+
     return rehash(table);
 }
 
-void *find_element(Table *table, const char *key)
+int find_element(Table *table, const char *key, void **dst)
 {
+    *dst = NULL;
+
     if (table == NULL)
-        return NULL;
+        return -1;
 
     size_t hash_key = Hash(key,table->size, table->prime);
     Node *inz = table->buckets[hash_key];
@@ -129,7 +134,14 @@ void *find_element(Table *table, const char *key)
     while ((inz != NULL) && (strcmp(inz->key, key) != 0))
         inz = inz->next;
 
-    return (inz == NULL)? NULL : inz->value_ptr;
+    if (inz == NULL)
+    {
+        *dst = NULL;
+        return -1;
+    }
+
+    *dst = inz->value_ptr;
+    return 0;
 }
 
 void remove_element(Table *table, const char *key)
@@ -160,8 +172,19 @@ void remove_element(Table *table, const char *key)
     if ((inz->next != NULL) && (strcmp(inz->next->key, key) == 0))
     {
         Node *temp = inz->next->next;
-        free(inz->next->key);
-        free(inz->next->value_ptr);
+
+        if (inz->next->key != NULL)
+        {
+            free(inz->next->key);
+            inz->next->key = NULL;
+        }
+
+        if (inz->next->value_ptr != NULL)
+        {
+            free(inz->next->value_ptr);
+            inz->next->value_ptr = NULL;
+        }
+
         free(inz->next);
         table->element_number--;
         inz->next = temp;
@@ -181,9 +204,19 @@ void dispose_table(Table **table, int dispose_all_data)
 
             if (dispose_all_data == 1)
             {
-                free(deleted_ptr->key);
-                free(deleted_ptr->value_ptr);
+                if (deleted_ptr->key != NULL)
+                {
+                    free(deleted_ptr->key);
+                    deleted_ptr->key = NULL;
+                }
+
+                if (deleted_ptr->value_ptr != NULL)
+                {
+                    free(deleted_ptr->value_ptr);
+                    deleted_ptr->value_ptr = NULL;
+                }
             }
+
             free(deleted_ptr);
         }
     }

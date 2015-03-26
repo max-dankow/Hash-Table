@@ -12,7 +12,10 @@ int main()
     FILE* f = fopen("input.txt", "r");
 
     if (f == NULL)
+    {
+        fprintf(stderr, "Can't open file.");
         return 1;
+    }
 
     int table_size;
     fscanf(f, "%d", &table_size);
@@ -63,10 +66,11 @@ int main()
                 if (read_code != 1)
                     return 1;
 
-                int *rez = find_element(my_table, input_str);
-                if (rez == 0)
+                int *rez = NULL;
+
+                if (find_element(my_table, input_str, &rez) != 0)
                     printf("\033[32m%s NOT FOUND\n\n\033[0m", input_str);
-                else printf("\033[32mKEY: %s - VALUE: %d\n\n\033[0m", input_str,*rez);
+                else printf("\033[32mKEY: %s - VALUE: %d\n\n\033[0m", input_str, *rez);
 
                 break;
             case 'r':
@@ -87,5 +91,6 @@ int main()
     dispose_table(&my_table, 1);
     free(input_str);
     fclose(f);
+    printf("Tests OK.\n");
     return 0;
 }
